@@ -1,64 +1,59 @@
 .MODEL small
 .STACK 100h
 .DATA
+    row DW 190
+    barPos DW 130
+    barLen DW 60
+    ballx DW 155
+    bally DW 185
+    ballSize DW 5
+    ballVelX DW 3
+    ballVelY DW 3
+    barSpeed DW 5
+    brickLen DW 40
+    brickHeight DW 20
+    CurrLevel DW 0
+    brickCnt DW 8
+    currBrick DW 0
+    brickPos DW 0
+    timeaux db 0
+    windowWidth DW 320
+    windowHeight DW 200
+    rowCount DW 5
+    brickrowOffset DW 0
+    brickColors DB 04h, 05h, 06h, 07h, 08h, 0Ch, 0Ah, 0Bh
+    brickrow DW 0
 .CODE
-row DW 190
-barPos DW 130 ;bar x left
-barLen DW 60 ;bar x right =barpos+barlen
-ballx DW 155
-bally DW 185
-ballSize DW 5
-ballVelX DW 4
-ballVelY DW 4
-barSpeed DW 5
-brickLen DW 40
-brickHeight DW 20
-CurrLevel DW 0
-brickCnt DW 8
-currBrick DW 0
-brickPos DW 0
-timeaux db 0
-windowWidth DW 320
-windowHeight DW 200
-gameOverMsg db 'GAME OVER! Press any key to exit.$'
-StartMsg db 'Press any key to Start.$'
-rowCount DW 5
-brickrowOffset dw, 0
-brickColors Db 04h, 05h, 06h, 07h, 08h, 0Ch, 0Ah, 0Bh,0Bh,0Ah,0Ch,08h,07h,06h,05h,04h,03h,02h,01h,04h, 05h, 06h, 07h, 08h, 0Ch, 0Ah, 0Bh,0Bh,0Ah,0Ch,08h,07h,06h,05h,04h,03h,02h,01h,04h, 05h, 06h, 07h, 08h, 0Ch, 0Ah, 0Bh
-brickrow DW 0
 MAIN PROC FAR
+    ; Set up the data segment
     mov ax, @DATA
     mov ds, ax
-    mov ax,0A000h
-    mov es,ax
-    mov ax,003h
+    ; Switch to graphics mode
+    mov ax, 0A000h
+    mov es, ax
+    mov ax, 003h
     int 10h
-    mov ah,0h
-    mov al,13h
+    mov ah, 0h
+    mov al, 13h
     int 10h
-    ; Wait for key press to start
-    call drawBackground  ; Draw the background
-    mov brickrow, 0; Draw the background
-    mov brickpos, 0
-    call drawbrick
+
+    ; Initialize game (set bar, ball, etc.)
+    call drawBackground
+    call drawBrick
     call drawBall
     call drawBar
-    call copyBufferToScreen
     call getKeyPress
 GameLoop:
     call drawBackground  ; Draw the background
     mov brickrow, 0; Draw the background
     mov brickpos, 0
     call drawbrick
-    ; Update ball position
-   ; call drawLevel
     call drawBall
-    call moveball       ; Draw the ball
-    ; Draw the bar
+    call moveball       
     mov row, 190
     call drawBar
+    
     call copyBufferToScreen
-    ; Check for key press (non-blocking)
     mov ah, 01h          ; Check if key is pressed
     int 16h
     jz skipInput         ; If no key pressed, skip input handling
@@ -289,6 +284,8 @@ loop2:
     ret
 drawBrick ENDP
 copyBufferToScreen PROC
+    push ds
+    push es
     mov ax, 0A000h
     mov es, ax
     mov ds, ax
@@ -296,6 +293,8 @@ copyBufferToScreen PROC
     mov di, 0
     mov cx, 320*200
     rep movsb
+    pop es
+    pop ds
     ret
 copyBufferToScreen ENDP
 Exit:
