@@ -12,7 +12,7 @@
     ballVelY       DW 3
     barSpeed       DW 5
     brickLen       DW 40
-    brickHeight    DW 20
+    brickHeight    DW 10
     CurrLevel      DW 0
     brickCnt       DW 6
     currBrick      DW 0
@@ -24,7 +24,83 @@
     brickrowOffset DW 2
     brickrow       DW 0
     brickSpacing   DW 10
+    score DW 0
+    brick1x dw 10
+    brick1y dw 10
+    brick2x dw 60
+    brick2y dw 10
+    brick3x dw 110
+    brick3y dw 10
+    brick4x dw 160
+    brick4y dw 10
+    brick5x dw 210
+    brick5y dw 10
+    brick6x dw 260
+    brick6y dw 10
+
+    brick7x dw 10
+    brick7y dw 30
+    brick8x dw 60
+    brick8y dw 30
+    brick9x dw 110
+    brick9y dw 30
+    brick10x dw 160
+    brick10y dw 30
+    brick11x dw 210
+    brick11y dw 30
+    brick12x dw 260
+    brick12y dw 30
+
+    brick13x dw 10
+    brick13y dw 50
+    brick14x dw 60
+    brick14y dw 50
+    brick15x dw 110
+    brick15y dw 50
+    brick16x dw 160
+    brick16y dw 50
+    brick17x dw 210
+    brick17y dw 50
+    brick18x dw 260
+    brick18y dw 50
+    brick1Exist dw 1
+    brick2Exist dw 1
+    brick3Exist dw 1
+    brick4Exist dw 1
+    brick5Exist dw 1
+    brick6Exist dw 1
+    brick7Exist dw 1
+    brick8Exist dw 1
+    brick9Exist dw 1
+    brick10Exist dw 1
+    brick11Exist dw 1
+    brick12Exist dw 1
+    brick13Exist dw 1
+    brick14Exist dw 1
+    brick15Exist dw 1
+    brick16Exist dw 1
+    brick17Exist dw 1
+    brick18Exist dw 1
 .CODE
+BreakBrick MACRO y, x
+    mov dx, 0                ; Initialize the row counter
+BreakBrickLoop:
+    mov ax, x               
+    add ax, dx               ; Add the current row offset
+    mov bx, 320   
+    push dx           
+    mul bx                   ; Calculate memory offset
+    pop dx
+    add ax, y                ; Add base y-coordinate
+    mov di, ax               
+    mov al, 09h              
+    mov cx, brickLen        
+    rep stosb                ; Draw the brick row
+    inc dx                   ; Increment the row counter
+    cmp dx, brickHeight      
+    jb BreakBrickLoop        
+ENDM
+
 MAIN PROC FAR
     ; Set up the data segment
                          mov   ax, @DATA
@@ -43,11 +119,13 @@ MAIN PROC FAR
                          call  drawBrick
                          call  drawBall
                          call  drawBar
+                         ;BreakBrick brick9x brick9y
                          call  getKeyPress
     GameLoop:            
                          call  drawBackground            ; Draw the background
                          call  moveball
                          call  drawBall                  ; Draw the ball
+                         call checkBrickCollision
                          ;call  drawBrick
                          mov   row, 190
                          call  drawBar
@@ -273,6 +351,89 @@ moveball PROC
                          int   16h
                          jmp   Exit
 moveball ENDP
+checkBrickCollision PROC
+    ; Initialize loop variables
+    mov cx, 18                ; Number of bricks to check
+    mov si, OFFSET brick1x          ; Start with the first brick
+BrickCollisionLoop:
+    ; Check if the current brick exists
+    mov ax, [si+36]                ; Load the corresponding brickExist flag
+    cmp ax, 0                      ; Is the brick destroyed?
+    je NextBrick                   ; Skip if destroyed
+
+    ; Check collision with the ball
+    mov ax, ballx
+    cmp ax, [si]                   ; Compare ball x with brick x
+    jl NextBrick                   ; If left of brick, skip
+    mov bx, [si]
+    add bx, brickLen
+    cmp ax, bx                     ; Compare ball x with brick's right edge
+    jg NextBrick                   ; If right of brick, skip
+
+    mov ax, bally
+    cmp ax, [si+2]                 ; Compare ball y with brick y
+    jl NextBrick                   ; If above brick, skip
+    mov bx, [si+2]
+    add bx, brickHeight
+    cmp ax, bx                     ; Compare ball y with brick's bottom edge
+    jg NextBrick                   ; If below brick, skip
+
+    ; Collision detected
+    mov [si+36], 0                 ; Mark brick as destroyed
+    neg ballVelY                   ; Reverse ball's vertical velocity
+    push si                        ; Preserve current position
+    mov ax, [si]                   ; Load brick x position
+    mov bx, [si+2]                 ; Load brick y position
+    push bx                        ; Push brick y
+    push ax                        ; Push brick x
+    BreakBrick [si] [si+2]               ; Call macro with brick position
+    call Beep                  ; Make a beep sound
+    add sp, 4                      ; Clean up the stack
+    pop si                         ; Restore previous position
+NextBrick:
+    add si, 4                      ; Move to the next brick (x and y are 2 bytes each)
+    loop BrickCollisionLoop        ; Repeat for all bricks
+
+    ret
+checkBrickCollision ENDP
+
+beep proc
+        push ax
+        push bx
+        push cx
+        push dx
+        mov     al, 182         ; Prepare the speaker for the
+        out     43h, al         ;  note.
+        mov     ax, 400        ; Frequency number (in decimal)
+                                ;  for middle C.
+        out     42h, al         ; Output low byte.
+        mov     al, ah          ; Output high byte.
+        out     42h, al 
+        in      al, 61h         ; Turn on note (get value from
+                                ;  port 61h).
+        or      al, 00000011b   ; Set bits 1 and 0.
+        out     61h, al         ; Send new value.
+        mov     bx, 2          ; Pause for duration of note.
+.pause1:
+        mov     cx, 65535
+.pause2:
+        dec     cx
+        jne     .pause2
+        dec     bx
+        jne     .pause1
+        in      al, 61h         ; Turn off note (get value from
+                                ;  port 61h).
+        and     al, 11111100b   ; Reset bits 1 and 0.
+        out     61h, al         ; Send new value.
+
+        pop dx
+        pop cx
+        pop bx
+        pop ax
+
+ret
+beep endp
+
 drawBrick PROC
     ; Initialize variables
     mov   rowCount, 0
