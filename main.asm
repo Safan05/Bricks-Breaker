@@ -1,3 +1,4 @@
+;EXTERNDELAY = 5
 .MODEL small
 .STACK 100h
 .DATA
@@ -13,16 +14,16 @@
     brickLen       DW 40
     brickHeight    DW 20
     CurrLevel      DW 0
-    brickCnt       DW 8
+    brickCnt       DW 6
     currBrick      DW 0
-    brickPos       DW 0
+    brickPos       DW 10
     timeaux        db 0
     windowWidth    DW 320
     windowHeight   DW 200
-    rowCount       DW 5
-    brickrowOffset DW 0
-    brickColors    DB 04h, 05h, 06h, 07h, 08h, 0Ch, 0Ah, 0Bh
+    rowCount       DW 3
+    brickrowOffset DW 2
     brickrow       DW 0
+    brickSpacing   DW 10
 .CODE
 MAIN PROC FAR
     ; Set up the data segment
@@ -38,21 +39,18 @@ MAIN PROC FAR
                          int   10h
 
     ; Initialize game (set bar, ball, etc.)
-                         call  drawBackground
+                         call  drawBackgroundinit
                          call  drawBrick
                          call  drawBall
                          call  drawBar
                          call  getKeyPress
     GameLoop:            
                          call  drawBackground            ; Draw the background
-                         mov   brickrow, 0               ; Draw the background
-                         mov   brickpos, 0
-                         call  drawbrick
-                         call  drawBall
                          call  moveball
+                         call  drawBall                  ; Draw the ball
+                         ;call  drawBrick
                          mov   row, 190
                          call  drawBar
-    
                          call  copyBufferToScreen
                          mov   ah, 01h                   ; Check if key is pressed
                          int   16h
@@ -113,12 +111,47 @@ DRAWBALL PROC NEAR
 		
                          RET
 DRAWBALL ENDP
-drawBackground PROC
+ERASEBALL PROC NEAR
+		
+                         MOV   CX,BALLX                  ;set the initial column (X)
+                         MOV   DX,BALLY                  ;set the initial line (Y)
+		
+    ERASE_BALL_HORIZONTAL:
+                         MOV   AH,0Ch                    ;set the configuration to writing a pixel
+                         MOV   AL,09h                    ;choose white as color
+                         MOV   BH,00h                    ;set the page number
+                         INT   10h                       ;execute the configuration
+			
+                         INC   CX                        ;CX = CX + 1
+                         MOV   AX,CX                     ;CX - BALL_X > BALL_SIZE (Y -> We go to the next line,N -> We continue to the next column
+                         SUB   AX,BALLX
+                         CMP   AX,BALLSIZE
+                         JNG   ERASE_BALL_HORIZONTAL
+			
+                         MOV   CX,BALLX                  ;the CX register goes back to the initial column
+                         INC   DX                        ;we advance one line
+			
+                         MOV   AX,DX                     ;DX - BALL_Y > BALL_SIZE (Y -> we exit this procedure,N -> we continue to the next line
+                         SUB   AX,BALLY
+                         CMP   AX,BALLSIZE
+                         JNG   ERASE_BALL_HORIZONTAL
+		
+                         RET
+ERASEBALL ENDP
+drawBackgroundinit PROC
                          mov   di,0h
                          mov   al,09h
                          mov   cx,64000
-                         rep   STOSB
+                         rep stosb
                          ret
+drawBackgroundinit ENDP
+drawBackground PROC
+                         mov di,19200
+                         mov al,09h
+                         mov cx,44800
+                         rep stosb
+
+
 drawBackground ENDP
 drawBar PROC
                          mov   ax, row
@@ -140,6 +173,7 @@ getKeyPress PROC
                          ret
 getKeyPress ENDP
 moveball PROC
+                             call  ERASEBALL
     ; Update ball's horizontal position
                          mov   ax, ballVelX              ; Load horizontal velocity
                          add   ballx, ax                 ; Update horizontal position
@@ -240,49 +274,59 @@ moveball PROC
                          jmp   Exit
 moveball ENDP
 drawBrick PROC
-    ; Draw to the back buffer
-                         mov   rowCount, 0
-                         mov   brickrow, 0
-                         mov   brickHeight, 10
-                         mov   si, 0
-    drawrow:             
-    
-                         mov   currBrick, 0
-                         mov   brickpos, 0
+    ; Initialize variables
+    mov   rowCount, 0
+    mov   brickrow, 10     ; Top spacing (10 pixels)
+    mov   brickHeight, 10
+    mov   si, 0
 
-    loop1:               
-                         mov   brickrowOffset, 0
+drawrow:
+    mov   currBrick, 0
+    mov   brickpos, 10     ; Left boundary spacing
 
-    loop2:               
-                         mov   ax, brickrow
-                         add   ax, brickrowOffset
-                         mov   bx, 320
-                         mul   bx
-                         add   ax, brickpos
-                         mov   di, ax
+loop1:
+    mov   brickrowOffset, 0
 
-                         mov   al, [brickColors + si]
-                         mov   cx, brickLen
-                         rep   stosb
-                         inc   brickrowOffset
-                         mov   ax, brickHeight
-                         cmp   brickrowOffset, ax
-                         jl    loop2
+loop2:
+    mov   ax, brickrow
+    add   ax, brickrowOffset
+    mov   bx, 320
+    mul   bx
+    add   ax, brickpos
+    mov   di, ax
 
-                         add   brickpos, 40
-                         inc   si
-                         inc   currBrick
-                         mov   ax, brickCnt
-                         cmp   currBrick, ax
-                         jl    loop1
+    mov   al, 06h          ; Brick color
+    mov   cx, brickLen
+    rep   stosb
+    inc   brickrowOffset
+    mov   ax, brickHeight
+    cmp   brickrowOffset, ax
+    jl    loop2
 
-                         add   brickrow, 10
-                         inc   rowCount
-                         cmp   rowCount, 5
-                         jl    drawrow
+    ; Update brick position for next column with spacing
+    mov   ax, 40           ; Brick width
+    add   ax, brickSpacing
+    add   brickpos, ax
 
-                         ret
+    inc   si
+    inc   currBrick
+    mov   ax, brickCnt
+    cmp   currBrick, ax
+    jl    loop1
+
+    ; Update brickrow for next row with spacing
+    mov   ax, 10           ; Brick height
+    add   ax, brickSpacing
+    add   brickrow, ax
+
+    inc   rowCount
+    cmp   rowCount, 3      ; Number of rows
+    jl    drawrow
+
+    ret
 drawBrick ENDP
+
+
 copyBufferToScreen PROC
                          push  ds
                          push  es
@@ -301,5 +345,6 @@ copyBufferToScreen ENDP
                          MOV   AX, 4C00h                 ; Function to terminate program
                          INT   21H                       ; Call DOS interrupt to exit
                          hlt
+
 MAIN ENDP
 END MAIN

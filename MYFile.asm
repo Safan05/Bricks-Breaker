@@ -1,42 +1,12 @@
 EXTERNDELAY = 3
-.model small
 .stack 100h
+.model small
 .data
-
-Welcomemsg db "  BRICK BREAKER GAME $ "
-Entermsg db " 1-> NEW GAME $ "
-Instructionmsg db " 2-> INSTRUCTIONS $ "
-Highscr db " 3-> HIGH SCORE$"
-Ext db " 4-> Exit$"
-tip1msg db "1)You have Three levels in this game $"
-tip2msg db "2) You need to hit the ball to direct it toward hitting the bricks above. When the ball comes into contact with a brick, the brick will  break .  $"
-
-tip3msg db "3)You need to moves the paddle from left to right to keep the ball from falling. $"
-tip4msg db "4)Life is used when the player fails to hitthe ball. $"
-tip5msg db "5)Number of lives are displayed on top of the screen. $"
-
-tip6msg db "6) Your score will increased by breaking the brick $"
-tip7msg db "Score as much as you can and Enjoy the game $"
-tip8msg db "BEST OF LUCK :)  $"
-
-usermsg db "Enter the name of the user : $ "
-username db 50 dup("$")
-loadingmsg db "GAME IS LOADING...$"
-mainmenumsg db "Press any key to go back to Main Menu $" 
-
-
-f1 db "file.txt",0
-
-handle dw 0
-buffer db 100 DUP('$')
-
 score db 'Score: $'
 scoreCount dw 0
-lives db  3h
+lives db '              Lives: '
 livesCount db 51
 ending db ' $'
-
-
 
 ballY dw 163
 ballX dw 158
@@ -66,6 +36,8 @@ brick5x dw 205
 brick5y dw 25
 brick6x dw 245
 brick6y dw 25
+
+
 brick7x dw 45
 brick7y dw 45
 brick8x dw 85
@@ -79,24 +51,18 @@ brick11y dw 45
 brick12x dw 245
 brick12y dw 45
 
-
-              
-
-                                                                                                                           
 .code
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;redrawStriker macro;;;;;;;;;;
 redrawStriker macro visColor
 
 mov color, visColor
 call drawStriker
 endm
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;redrawBall macro;;;;;;;;;;;;;;;;
+
 redrawBall macro visColor
     mov color, visColor
     call drawball
 endm
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;BuildBrick macro;;;;;;;;;;;;;;;;
 BuildBrick macro  A, B
     push ax
     push bx
@@ -106,9 +72,6 @@ BuildBrick macro  A, B
     pop bx
     pop ax
 endm
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;DestroyBrick macro;;;;;;;;;;;;
-
 DestroyBrick macro  A, B
     push ax
     push bx
@@ -121,38 +84,6 @@ DestroyBrick macro  A, B
     pop bx
     pop ax
 endm
-;;;;;;;;;;;;;;;;;;;;;;;;;;DestroyBrick2 macro;;;;;;;;;;;;
-
-DestroyBrick2 macro  A, B
-    push ax
-    push bx
-    mov ax, A
-    mov bx, B
-    call RemoveBrick
-    call beep     
-    inc scoreCount
-    call DrawLivesScores2
-    pop bx
-    pop ax
-endm
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;DestroyBrick3 macro;;;;;;;;;;;;
-
-DestroyBrick3 macro  A, B
-    push ax
-    push bx
-    mov ax, A
-    mov bx, B
-    call RemoveBrick
-    call beep     
-    inc scoreCount
-    call DrawLivesScores3
-    pop bx
-    pop ax
-endm
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;BrickCollision macro;;;;;;;;;
 
 BrickCollision MACRO X, Y
 local copper
@@ -186,8 +117,6 @@ local copper
     mov Y, 300
     cmp scoreCount, 12
     jne copper
-
-    call Level2
     mov ah,4ch
     int 21h
     
@@ -199,121 +128,12 @@ local copper
     
 endm
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;BrickCollision2 macro;;;;;;;;;
-
-BrickCollision2 MACRO X, Y
-local copper2
-    push ax
-    push bx
-    push cx
-    push dx
-    mov ax, ballY
-    mov bx, ballX
-    mov cx, X
-    mov dx, Y
-    
-    cmp dx, ballY
-    jl copper2
-    sub dx, 7
-    
-    cmp ballY, dx
-    jl copper2
-    
-    
-    mov dx, X 
-    
-    cmp ballX, dx
-    jl copper2
-    add dx, 30
-    cmp dx, ballX
-    jl copper2
-    
-    call switcher2
-    DestroyBrick2 X, Y
-    mov Y, 300
-    cmp scoreCount, 24
-    jne copper2
-
-   
-    call Level3
-    mov ah,4ch
-    int 21h
-    
-    copper2:
-    pop dx
-    pop cx
-    pop bx
-    pop ax                      
-    
-endm
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;BrickCollision3 macro;;;;;;;;;
-
-BrickCollision3 MACRO X, Y
-local copper3
-    push ax
-    push bx
-    push cx
-    push dx
-    mov ax, ballY
-    mov bx, ballX
-    mov cx, X
-    mov dx, Y
-    
-    cmp dx, ballY
-    jl copper3
-    sub dx, 7
-    
-    cmp ballY, dx
-    jl copper3
-    
-    
-    mov dx, X 
-    
-    cmp ballX, dx
-    jl copper3
-    add dx, 30
-    cmp dx, ballX
-    jl copper3
-    
-    call switcher3
-    DestroyBrick2 X, Y
-    mov Y, 300
-    cmp scoreCount, 36
-    jne copper3
-
-   
-    call UWin
-    mov ah,4ch
-    int 21h
-    
-    copper3:
-    pop dx
-    pop cx
-    pop bx
-    pop ax                      
-    
-endm
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;main;;;;;;;;;;;;;;;;;;;;;;;
 main proc
     mov ax,@data
     mov ds,ax
-    call mainpage       
- main endp 
-
- ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mainpage;;;;;;;;;;;;;;;;;;;;;;;;
-mainpage proc
-
     
-
-    
-   
-    call setVideoMode  
-    call drawBoundary 
-
+    call setVideoMode
+    call drawBoundary
     BuildBrick brick1x brick1y
     BuildBrick brick2x brick2y
     BuildBrick brick3x brick3y
@@ -326,87 +146,23 @@ mainpage proc
     BuildBrick brick10x brick10y
     BuildBrick brick11x brick11y
     BuildBrick brick12x brick12y
-    
     redrawStriker 7
-    redrawBall 3
+    redrawBall 3                
     call DrawLivesScores
-    pop bx
-    pop ax
-    call gameLoop
-  
- ret  
+    
+    call gameLoop      
+    
+    mov ah,4ch
+    int 21h
+   
+main endp
 
-mainpage endp
-
-
-
-
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Rec;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Rec proc
-mov si,100
-mov di,350
-Aright:
-MOV AH,0CH
-mov al,14
-INT 10H
-mov bh,0
-cmp si,di
-je dwn
-inc si
-inc cx
-jmp Aright
-dwn:
-mov si,0
-Adown:
-MOV AH, 0CH
-mov al,14
-INT 10H
-mov bh,0
-cmp si,di
-je lft
-inc si
-inc dx
-jmp Adown
-lft:
-mov si,0
-Aleft:
-MOV AH, 0CH
-mov al,14
-INT 10H
-mov bh,0
-cmp si,di
-je ups
-inc si
-dec cx
-jmp Aleft
-ups:
-mov si,0
-Aup:
-MOV AH, 0CH
-mov al,14
-INT 10H
-mov bh,0
-cmp si,di
-je ex
-inc si
-dec dx
-jmp Aup
-ex:
-ret 4
-Rec endp
-
-
- ;;;;;;;;;;;;;;;;;;;;;;;DrawLivesScores;;;;;;;;;;;;;;;;;;;;
-
- DrawLivesScores proc
+DrawLivesScores proc
     push dx
     push ax
                  
-    mov dh, 26 ;row
-    mov dl, 20 ;col
+    mov dh, 23 ;row
+    mov dl, 5 ;col
     mov ah, 2 
     int 10h
     
@@ -416,25 +172,75 @@ Rec endp
     
     call printScore
     
-    mov dh, 26 ;row
-    mov dl, 0 ;col
-    mov ah, 2 
-    int 10h
-
-    lea dx, lives
+    lea dx,lives
     mov ah,9
     int 21h  
-   
 
-    
     pop ax
     pop dx
     ret
     DrawLivesScores endp
 
-    ;;;;;;;;;;;;;;;;;;;;;;;;;CollisionStriker;;;;;;;;;;;;;
+printScore proc
+    push ax
+    push bx
+    push cx
+    push dx
+    
+    mov cx,0
+    
+    mov ax,scoreCount
+    ll:
+    mov bx,10
+    mov dx,0
+    div bx
+    push dx
+    inc cx
+    cmp ax,0
+    jne ll
+    
+    l2:
+    pop dx
+    mov ah,2
+    add dl,'0'
+    int 21h
+    loop l2
+    
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    
+    ret
+    printScore endp
 
-    CollisionStriker proc    
+sleep proc
+
+mov cx,111111111111111b 
+
+l:
+loop l
+ret
+sleep endp
+
+drawball proc
+    push bx
+    mov bx, ballX
+    mov startx, bx
+    add bx, 4 
+    mov endx,   bx
+    mov bx, ballY
+    mov starty, bx
+    add bx, 4
+    mov endy,   bx
+    
+    pop bx
+    
+    call draw
+ret
+drawball endp
+
+CollisionStriker proc    
     push ax
     push bx
     push cx
@@ -463,8 +269,8 @@ Rec endp
     fail:
     mov begin,0 
     dec livesCount
-    cmp livesCount,48    ; when lives become 0
-    je  khatam           ; Game end
+    cmp livesCount,48
+    je khatam
     push ax
     push bx
     push cx
@@ -495,19 +301,8 @@ Rec endp
     
     
     
-    khatam:
-
-    mov dh, 37  ;row
-    mov dl, 8 ;col
-    mov ah, 2 
-    int 10h
-     
-    lea dx, Gamovr
-    mov ah,9
-    int 21h
-
+    khatam:             
     call DrawLivesScores
-    
     mov ah,4ch
     int 21h 
                   
@@ -520,75 +315,6 @@ Rec endp
     ret
     CollisionStriker endp
 
-  
-   
-;;;;;;;;;;;;;;;;;;;;;;;;;setVideoMode;;;;;;;;;;;;;;;;;;;;;;;
-setVideoMode proc
-    
-    mov ah, 0   ; set display mode function.
-    mov al, 13h ; mode 13h = 320x200 pixels, 256 colors.
-    int 10h     
-    
-    ret
-    setVideoMode endp
-
-;;;;;;;;;;;;;;;;;;;;;draw;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-draw proc
-    push ax
-    push cx
-    push dx
-     
-    mov dx,starty
-    mov cx,startx
-    mov ah,0ch
-    mov al,color
-    c1:
-    inc cx
-    int 10h
-    cmp cx,endx
-    jne c1
-
-    mov cx,startx
-    inc dx
-    cmp dx,endy
-    jne c1 
-    
-    pop dx
-    pop cx
-    pop ax
-    ret
-draw endp
-
-repeat1:
-gameLoop:        
-   CALL    checkKeyboard
-   cmp begin,1
-   jne repeat1
-   
-   
-   
-   call Collisionwall
-   call CollisionStriker 
-   BrickCollision Brick1x, Brick1y
-   BrickCollision Brick2x, Brick2y
-   BrickCollision Brick3x, Brick3y
-   BrickCollision Brick4x, Brick4y
-   BrickCollision Brick5x, Brick5y
-   BrickCollision Brick6x, Brick6y 
-   BrickCollision Brick7x, Brick7y
-   BrickCollision Brick8x, Brick8y
-   BrickCollision Brick9x, Brick9y
-   BrickCollision Brick10x, Brick10y
-   BrickCollision Brick11x, Brick11y
-   BrickCollision Brick12x, Brick12y
-   
-   CALL baller  
-   CALL sleep
-
-   JMP     gameLoop 
-    
-exit:
 
 switcher:
     cmp ballUp, 1
@@ -601,49 +327,62 @@ switcher:
     dec ballUp
     ret
 
-ajeebse:
-ret
+AddBrick proc
+    push ax
+    push bx    
+    mov startx, ax
+    mov color, 13  
+    mov ax, bx
+    mov bx, startx
+    
+    add bx, 30
+    
+    mov endx,bx
+    
+    mov starty, ax 
+    
+    mov bx,starty
+                    
+    add bx,7
+    mov endy,bx
+     
+    call draw
+    pop bx
+    pop ax 
+    ret
+    AddBrick endp
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;baller;;;;;;;;;;;;;;;;;;;;
-baller proc  
+RemoveBrick proc 
     
-    inc innerDelay
-    cmp innerDelay, EXTERNDELAY
-    jne ajeebse 
-    mov innerDelay, 0
-    redrawBall 0  
+    push ax
+    push bx
+    push cx
+    push dx
+       
+    mov startx, ax
+    mov color, 0  
+    mov ax, bx
+    mov bx, startx
     
-    mov bx,ballX 
-    cmp ballLeft, 1
-    je Left
-    jne Right
+    add bx, 30
     
-    Left:   
-    sub bx, 2 
-    jmp P2;  
-    Right:   
-    add bx, 2
+    mov endx,bx
     
-    P2:
-    mov ballX,  bx
-    mov bx, ballY
-    cmp ballUp, 1   
-    je Up
-    jne Down
-    Up:
-    sub bx, 2
-    jmp P3
-    Down:
-    add bx, 2
-    P3:
-    mov ballY,  bx
-   
-    redrawBall 3
+    mov starty, ax 
     
-ret
-baller endp 
-
-;;;;;;;;;;;;;;;;;;;;;Collisionwall;;;;;;;;;;;;;;;;;;;
+    mov bx,starty
+    
+    add bx,7
+    mov endy,bx
+     
+    call draw 
+    
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    RemoveBrick endp
 
 Collisionwall proc     
     
@@ -679,43 +418,83 @@ Collisionwall proc
     ret
     Collisionwall endp
 
+gameOver proc
+    
+    mov ah,4ch
+    int 21h
+    gameOver endp
 
-;;;;;;;;;;;;;;;;;;;;;RemoveBrick;;;;;;;;;;;;;;;;;;
+ajeebse:
+ret
+baller proc  
+    
+	inc innerDelay
+	cmp innerDelay, EXTERNDELAY
+	jne ajeebse 
+	mov innerDelay, 0
+    redrawBall 0  
+    
+	mov bx,ballX 
+	cmp ballLeft, 1
+	je Left
+	jne Right
+	
+	Left:   
+	sub bx, 2 
+	jmp P2;  
+	Right:   
+	add bx, 2
+	
+	P2:
+	mov ballX,  bx
+	mov bx, ballY
+	cmp ballUp, 1   
+	je Up
+	jne Down
+	Up:
+    sub bx, 2
+	jmp P3
+	Down:
+    add bx, 2
+	P3:
+    mov ballY,  bx
+   
+    redrawBall 3
+    
+ret
+baller endp   
 
-RemoveBrick proc 
-    
-    push ax
-    push bx
-    push cx
-    push dx
-       
-    mov startx, ax
-    mov color, 0  
-    mov ax, bx
-    mov bx, startx
-    
-    add bx, 30
-    
-    mov endx,bx
-    
-    mov starty, ax 
-    
-    mov bx,starty
-    
-    add bx,7
-    mov endy,bx
-     
-    call draw 
-    
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-    RemoveBrick endp
 
-
-;;;;;;;;;;;;;;;;;;;;;;checkKeyboard;;;;;;;;;;;;;;;;;
+repeat:
+gameLoop:        
+   CALL    checkKeyboard
+   cmp begin,1
+   jne repeat
+   
+   
+   
+   call Collisionwall
+   call CollisionStriker 
+   BrickCollision Brick1x, Brick1y
+   BrickCollision Brick2x, Brick2y
+   BrickCollision Brick3x, Brick3y
+   BrickCollision Brick4x, Brick4y
+   BrickCollision Brick5x, Brick5y
+   BrickCollision Brick6x, Brick6y 
+   BrickCollision Brick7x, Brick7y
+   BrickCollision Brick8x, Brick8y
+   BrickCollision Brick9x, Brick9y
+   BrickCollision Brick10x, Brick10y
+   BrickCollision Brick11x, Brick11y
+   BrickCollision Brick12x, Brick12y
+   
+   CALL baller  
+   CALL sleep
+   JMP     gameLoop 
+    
+exit:
+    mov ah, 4ch
+    int 21h
 
 checkKeyboard proc
     mov     ah,     1h
@@ -778,77 +557,31 @@ checkKeyboard proc
 
 checkKeyboard endp
 
-
-;;;;;;;;;;;;;;;;;;;;;;;sleep;;;;;;;;;;;;;;;;;;;;;;;;;
-
-sleep proc
-
-mov cx,1111111111111111b 
-
-l:
-loop l
-ret
-sleep endp
-;;;;;;;;;;;;;;;;;;;;;;;sleep2;;;;;;;;;;;;;;;;;;;;;;;;;
-
-sleep2 proc
-
-mov cx,111111111111111b 
-
-.l:
-loop .l
-ret
-sleep2 endp
-;;;;;;;;;;;;;;;;;;;;;;;sleep3;;;;;;;;;;;;;;;;;;;;;;;;;
-
-sleep3 proc
-
-mov cx,11111111111111b 
-
-slp:
-loop slp
-ret
-sleep3 endp 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;printScore;;;;;;;;;;;;;;;;;;;;;;
-
-
-printScore proc
+draw proc
     push ax
-    push bx
     push cx
     push dx
-    
-    mov cx,0
-    
-    mov ax,scoreCount
-    ll:
-    mov bx,10
-    mov dx,0
-    div bx
-    push dx
+     
+    mov dx,starty
+    mov cx,startx
+    mov ah,0ch
+    mov al,color
+    c:
     inc cx
-    cmp ax,0
-    jne ll
-    
-    l2:
-    pop dx
-    mov ah,2
-    add dl,'0'
-    int 21h
-    loop l2
+    int 10h
+    cmp cx,endx
+    jne c
+
+    mov cx,startx
+    inc dx
+    cmp dx,endy
+    jne c 
     
     pop dx
     pop cx
-    pop bx
     pop ax
-    
     ret
-    printScore endp
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;drawStriker;;;;;;;;;;;;;;;;;;;;;;;
+draw endp
 
 drawStriker proc
     push bx
@@ -868,56 +601,7 @@ drawStriker proc
     ret
     drawStriker endp
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;AddBrick;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-AddBrick proc
-    push ax
-    push bx    
-    mov startx, ax
-    mov color, 13  
-    mov ax, bx
-    mov bx, startx
-    
-    add bx, 30
-    
-    mov endx,bx
-    
-    mov starty, ax 
-    
-    mov bx,starty
-                    
-    add bx,7
-    mov endy,bx
-     
-    call draw
-    pop bx
-    pop ax 
-    ret
-    AddBrick endp
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drawball;;;;;;;;;;;;;;;;;
-
-
-drawball proc
-    push bx
-    mov bx, ballX
-    mov startx, bx
-    add bx, 4 
-    mov endx,   bx
-    mov bx, ballY
-    mov starty, bx
-    add bx, 4
-    mov endy,   bx
-    
-    pop bx
-    
-    call draw
-ret
-drawball endp
-
-
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;drawBoundary;;;;;;;;;;;;;;;
-
-    drawBoundary proc
+drawBoundary proc
     mov color,6    
     ;------TOP------------
     mov startx,20
@@ -947,8 +631,15 @@ drawball endp
     ret
     drawBoundary endp
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;beep;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+setVideoMode proc
+    
+    mov ah, 0   ; set display mode function.
+    mov al, 13h ; mode 13h = 320x200 pixels, 256 colors.
+    int 10h     
+    
+    ret
+    setVideoMode endp
 
 beep proc
         push ax
@@ -986,23 +677,4 @@ beep proc
 
 ret
 beep endp
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;UWinn;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-UWin proc
-
-    mov dh, 37  ;row
-    mov dl, 8 ;col
-    mov ah, 2 
-    int 10h
-
-lea dx, UWinn   
-mov ah, 09
-int 21h
- 
-mov ah,4ch
-int 21h
-
-UWin endp
-
 end main
