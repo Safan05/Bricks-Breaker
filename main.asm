@@ -25,43 +25,46 @@
     brickrow       DW 0
     brickSpacing   DW 10
     score DW 0
+    Lives DW 3
+    livesStr db 'lives: ', '$' ; String to display lives
     brick1x dw 10
-    brick1y dw 10
     brick2x dw 60
-    brick2y dw 10
     brick3x dw 110
-    brick3y dw 10
     brick4x dw 160
-    brick4y dw 10
     brick5x dw 210
-    brick5y dw 10
     brick6x dw 260
+    brick7x dw 10
+    brick8x dw 60
+    brick9x dw 110
+    brick10x dw 160
+    brick11x dw 210
+    brick12x dw 260
+    brick13x dw 10
+    brick14x dw 60
+    brick15x dw 110
+    brick16x dw 160
+    brick17x dw 210
+    brick18x dw 260
+
+    brick1y dw 10
+    brick2y dw 10
+    brick3y dw 10
+    brick4y dw 10
+    brick5y dw 10
     brick6y dw 10
 
-    brick7x dw 10
     brick7y dw 30
-    brick8x dw 60
     brick8y dw 30
-    brick9x dw 110
     brick9y dw 30
-    brick10x dw 160
     brick10y dw 30
-    brick11x dw 210
     brick11y dw 30
-    brick12x dw 260
     brick12y dw 30
 
-    brick13x dw 10
     brick13y dw 50
-    brick14x dw 60
     brick14y dw 50
-    brick15x dw 110
     brick15y dw 50
-    brick16x dw 160
     brick16y dw 50
-    brick17x dw 210
     brick17y dw 50
-    brick18x dw 260
     brick18y dw 50
     brick1Exist dw 1
     brick2Exist dw 1
@@ -115,20 +118,47 @@ MAIN PROC FAR
                          int   10h
 
     ; Initialize game (set bar, ball, etc.)
+    GameProc PROC FAR
+                            mov  ballx, 155
+                            mov  bally, 185
+                            mov  ballVelX, 3
+                            mov  ballVelY, 3
+                            mov  barPos, 130
+                            mov  barLen, 60
+                            mov  barSpeed, 5
+                            mov  brickLen, 40
+                            mov si,offset brick1Exist
+                            mov bx,0
+                            mov cx,18
+                            initloop:
+                                mov [si+bx],1
+                                add bx,2
+                            loop initloop
                          call  drawBackgroundinit
                          call  drawBrick
                          call  drawBall
                          call  drawBar
+                         call  copyBufferToScreen
                          ;BreakBrick brick9x brick9y
                          call  getKeyPress
+                         
     GameLoop:            
+WaitForVSync:
+    mov dx, 03DAh         ; VGA Input Status Register 1
+WaitForRetrace:
+    in al, dx
+    test al, 08h          ; Check the Vertical Retrace bit (bit 3)
+    jz WaitForRetrace     ; Loop until retrace starts
                          call  drawBackground            ; Draw the background
+                         call checkBrickCollision
                          call  moveball
                          call  drawBall                  ; Draw the ball
                          call checkBrickCollision
+                         call checkWin
                          ;call  drawBrick
                          mov   row, 190
                          call  drawBar
+
                          call  copyBufferToScreen
                          mov   ah, 01h                   ; Check if key is pressed
                          int   16h
@@ -162,7 +192,7 @@ MAIN PROC FAR
                          add   barPos, bx                ; Move bar right
                          jmp   GameLoop
 
-DRAWBALL PROC NEAR
+    DRAWBALL PROC NEAR
 		
                          MOV   CX,BALLX                  ;set the initial column (X)
                          MOV   DX,BALLY                  ;set the initial line (Y)
@@ -293,8 +323,7 @@ moveball PROC
                          jl    negVelY                   ; Reverse vertical direction if it has
                          mov   ax, windowHeight          ; Check against bottom boundary
                          cmp   bally, ax
-                         jg    gameOver                  ; Reverse vertical direction if it has
-
+                         jg   checkEndGame                  ; Reverse vertical direction if it has
                          ret
 
     negVelX:             
@@ -304,6 +333,13 @@ moveball PROC
     negVelY:             
                          neg   ballVelY                  ; Reverse vertical direction
                          ret
+    checkEndGame:
+                            mov ax, Lives
+                            dec ax
+                            mov Lives, ax
+                            cmp ax, 0
+                            je gameOver
+                            call GameProc
     gameOver:            
     ; Switch to text mode (80x25, color)
                          mov   ax, 0003h
@@ -353,11 +389,11 @@ moveball PROC
 moveball ENDP
 checkBrickCollision PROC
     ; Initialize loop variables
-    mov cx, 18                ; Number of bricks to check
+    mov cx, 18                      ; Number of bricks to check
     mov si, OFFSET brick1x          ; Start with the first brick
 BrickCollisionLoop:
     ; Check if the current brick exists
-    mov ax, [si+36]                ; Load the corresponding brickExist flag
+    mov ax, [si+72]                ; Load the corresponding brickExist flag
     cmp ax, 0                      ; Is the brick destroyed?
     je NextBrick                   ; Skip if destroyed
 
@@ -371,31 +407,77 @@ BrickCollisionLoop:
     jg NextBrick                   ; If right of brick, skip
 
     mov ax, bally
-    cmp ax, [si+2]                 ; Compare ball y with brick y
+    cmp ax, [si+36]                 ; Compare ball y with brick y
     jl NextBrick                   ; If above brick, skip
-    mov bx, [si+2]
+    mov bx, [si+36]
     add bx, brickHeight
     cmp ax, bx                     ; Compare ball y with brick's bottom edge
     jg NextBrick                   ; If below brick, skip
 
     ; Collision detected
-    mov [si+36], 0                 ; Mark brick as destroyed
+    mov word ptr [si+72], 0        ; Mark brick as destroyed
     neg ballVelY                   ; Reverse ball's vertical velocity
-    push si                        ; Preserve current position
     mov ax, [si]                   ; Load brick x position
-    mov bx, [si+2]                 ; Load brick y position
-    push bx                        ; Push brick y
-    push ax                        ; Push brick x
-    BreakBrick [si] [si+2]               ; Call macro with brick position
+    mov bx, [si+36]                ; Load brick y position
+    BreakBrick [si] [si+36]        ; Call macro with brick position
     call Beep                  ; Make a beep sound
-    add sp, 4                      ; Clean up the stack
-    pop si                         ; Restore previous position
 NextBrick:
-    add si, 4                      ; Move to the next brick (x and y are 2 bytes each)
+    add si, 2                      ; Move to the next brick (x and y are 2 bytes each)
     loop BrickCollisionLoop        ; Repeat for all bricks
 
     ret
 checkBrickCollision ENDP
+checkWin PROC
+        mov si,offset brick1Exist
+        mov bx,0
+        mov cx,18
+    checkloop:
+            cmp word [si+bx],1
+            je endCheckWin
+            add bx,2
+        loop checkloop        
+            ; Switch to text mode (80x25, color)
+                         mov   ax, 0003h
+                         int   10h
+
+    ; Calculate the starting position for centering "WINNNER"
+                         mov   ax, 0B800h                ; Video memory segment
+                         mov   es, ax
+
+    ; Calculate row and column
+                         mov   cx, 12                    ; Center row (0-based, row 12)
+                         mov   bx, 50                    ; Center column (0-based, column 35)
+
+    ; Calculate the offset in video memory
+                         mov   ax, cx                    ; Row * 80
+                         mov   di, ax
+                         shl   di, 6                     ; Multiply by 64 (80 columns * 2 bytes per character)
+                         add   di, ax                    ; Multiply by 80 (80 = 64 + 16)
+                         add   di, bx                    ; Add column index
+                         shl   di, 1                     ; Multiply by 2 (2 bytes per character)
+
+    ; Write "GAME OVER" with red background and white text
+                         mov   ah, 4Fh                   ; Attribute byte: red background, white text
+                         mov   al, 'W'
+                         stosw
+                         mov   al, 'I'
+                         stosw
+                         mov   al, 'N'
+                         stosw
+                         mov   al, 'N'
+                         stosw
+                         mov   al, 'E'
+                         stosw
+                         mov   al, 'R'
+                         stosw
+
+    ; Wait for key press to exit
+                         mov   ah, 00h
+                         int   16h
+                         jmp   Exit
+        endCheckWin:
+            ret
+checkWin ENDP
 
 beep proc
         push ax
@@ -487,7 +569,6 @@ loop2:
     ret
 drawBrick ENDP
 
-
 copyBufferToScreen PROC
                          push  ds
                          push  es
@@ -506,6 +587,6 @@ copyBufferToScreen ENDP
                          MOV   AX, 4C00h                 ; Function to terminate program
                          INT   21H                       ; Call DOS interrupt to exit
                          hlt
-
+GameProc ENDP
 MAIN ENDP
 END MAIN
